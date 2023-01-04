@@ -8,7 +8,6 @@ import (
 	"log"
 	"math/rand"
 	"os"
-	"reflect"
 	"time"
 )
 
@@ -19,15 +18,13 @@ type meal struct {
 	main    string
 }
 
+type Day struct {
+	IdMeal sql.NullInt64
+}
+
 type week struct {
 	ID         int64
-	Sunday     sql.NullInt64
-	Monday     sql.NullInt64
-	Tuesday    sql.NullInt64
-	Wednesday  sql.NullInt64
-	Thursday   sql.NullInt64
-	Friday     sql.NullInt64
-	Saturday   sql.NullInt64
+	Days       [7]Day
 	Date_start string
 }
 
@@ -36,6 +33,7 @@ var db *sql.DB
 
 // init is invoked before main()
 func init() {
+
 	// loads values from .env into the system
 	if err := godotenv.Load(); err != nil {
 		log.Print("No .env file found")
@@ -71,7 +69,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Information_about_week: %v ", last_week)
+	fmt.Printf("Information_about_LAST_week: %v ", last_week)
 
 	//GET_ALL_MEALS_FROM_DATABASE
 	AllMeals, err := GetAllMeals()
@@ -88,6 +86,7 @@ func main() {
 	fmt.Print("\n ЗАГЛУШКА", AllMealID)
 
 }
+
 func CreateNextWeek(lastweek week, allmeals []meal) (week, error) {
 
 	var nextweek week
@@ -104,22 +103,24 @@ func CreateNextWeek(lastweek week, allmeals []meal) (week, error) {
 	var LastWeekMealsID []int64
 	LastWeekMealsID = append(
 		LastWeekMealsID,
-		lastweek.Sunday.Int64,
-		lastweek.Monday.Int64,
-		lastweek.Tuesday.Int64,
-		lastweek.Wednesday.Int64,
-		lastweek.Thursday.Int64,
-		lastweek.Friday.Int64,
-		lastweek.Saturday.Int64)
+		lastweek.Days[0].IdMeal.Int64,
+		lastweek.Days[1].IdMeal.Int64,
+		lastweek.Days[2].IdMeal.Int64,
+		lastweek.Days[3].IdMeal.Int64,
+		lastweek.Days[4].IdMeal.Int64,
+		lastweek.Days[5].IdMeal.Int64,
+		lastweek.Days[6].IdMeal.Int64,
+	)
 	fmt.Printf("LastWeekMealsID: %v\n", LastWeekMealsID)
 
 	//PART: Delete all index MealsIDLastWeak from AllMeals and create var Meals_ID_Without_Last_Week
 	Meals_ID_Without_Last_Week := AllMealsID
 	for _, lastweekmealID := range LastWeekMealsID {
+		// If we don't have meal this weak
 		if lastweekmealID == 0 {
 			continue
 		}
-		Meals_ID_Without_Last_Week = RemoveElementFromSlice(Meals_ID_Without_Last_Week, lastweekmealID)
+		RemoveElementFromSlice(&Meals_ID_Without_Last_Week, lastweekmealID-1)
 	}
 	fmt.Printf("Meals_ID_Without_Last_Week: %v, len: %v\n", Meals_ID_Without_Last_Week, len(Meals_ID_Without_Last_Week))
 
@@ -130,125 +131,26 @@ func CreateNextWeek(lastweek week, allmeals []meal) (week, error) {
 	fmt.Printf("Random Meals_ID_Without_Last_Week: %v\n", Meals_ID_Without_Last_Week)
 
 	//PART: Filling the days for next week in var "nextweek"
-	//Monday
-	var indexmeal = int64(1)
-	nextweek.Monday.Int64 = Meals_ID_Without_Last_Week[indexmeal]
-	nextweek.Monday.Valid = true
-	Meals_ID_Without_Last_Week = RemoveElementFromSlice(Meals_ID_Without_Last_Week, indexmeal)
-	fmt.Printf("NextWeek MondayID: %v\n", nextweek.Monday.Int64)
-	fmt.Printf("NextWeek MondayName: %v\n", allmeals[nextweek.Monday.Int64-1].Title)
-
-	//Tuesday
-	indexmeal = 0
-	var Days = [7]string{"Monday", "Tuesday", "Wednesday", "Thursday", "Friday"}
-	for _, Day := range Days {
-		reflectNextweek := reflect.ValueOf(nextweek).FieldByName(Day)
-		fmt.Printf("reflectNextweek: %v", reflectNextweek)
-		for allmeals[Meals_ID_Without_Last_Week[indexmeal]].main == allmeals[nextweek.Monday.Int64].main || allmeals[Meals_ID_Without_Last_Week[indexmeal]].garnish == allmeals[nextweek.Monday.Int64].garnish {
-			fmt.Printf("Tuesday allmeals[Meals_ID_Without_Last_Week[indexmeal]].main: %v\n", allmeals[Meals_ID_Without_Last_Week[indexmeal]].main)
-			fmt.Printf("Tuesday allmeals[nextweek.Monday.Int64].main: %v\n", allmeals[nextweek.Monday.Int64].main)
-			fmt.Printf("Tuesday allmeals[Meals_ID_Without_Last_Week[indexmeal]].garnish: %v\n", allmeals[Meals_ID_Without_Last_Week[indexmeal]].garnish)
-			fmt.Printf("Tuesday allmeals[nextweek.Monday.Int64].garnish: %v\n", allmeals[nextweek.Monday.Int64].garnish)
-			fmt.Printf("Tuesday indexmeal: %v\n", indexmeal)
-			indexmeal += 1
+	var Days = [7]string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
+	for DayIndex := 0; DayIndex < 7; DayIndex++ {
+		var MealIndex = int64(0)
+		fmt.Printf("!!!INTERATION #%v\n", DayIndex)
+		if DayIndex != 0 {
+			for allmeals[Meals_ID_Without_Last_Week[MealIndex]-1].main == allmeals[nextweek.Days[DayIndex-1].IdMeal.Int64-1].main || allmeals[Meals_ID_Without_Last_Week[MealIndex]-1].garnish == allmeals[nextweek.Days[DayIndex-1].IdMeal.Int64-1].garnish {
+				MealIndex += 1
+			}
+			fmt.Printf("Meals_ID_Without_Last_Week[MealIndex]].main: %v\n", allmeals[Meals_ID_Without_Last_Week[MealIndex]-1].main)
+			fmt.Printf(" allmeals[nextweek.Days[DayIndex-1].IdMeal.Int64].main: %v\n", allmeals[nextweek.Days[DayIndex-1].IdMeal.Int64-1].main)
+			fmt.Printf("Meals_ID_Without_Last_Week[MealIndex]].garnish: %v\n", allmeals[Meals_ID_Without_Last_Week[MealIndex]-1].garnish)
+			fmt.Printf(" allmeals[nextweek.Days[DayIndex-1].IdMeal.Int64].garnish: %v\n", allmeals[nextweek.Days[DayIndex-1].IdMeal.Int64-1].garnish)
 		}
+		fmt.Printf("NextWeek %v Name потребовалось %v попыток для нахождения блюда\n", Days[DayIndex], MealIndex)
+		nextweek.Days[DayIndex].IdMeal.Int64 = Meals_ID_Without_Last_Week[MealIndex]
+		nextweek.Days[DayIndex].IdMeal.Valid = true
+		RemoveElementFromSlice(&Meals_ID_Without_Last_Week, MealIndex)
+		fmt.Printf("NextWeek %vID: %v\n", Days[DayIndex], nextweek.Days[DayIndex].IdMeal.Int64)
+		fmt.Printf("NextWeek %vName: %v\n", Days[DayIndex], allmeals[nextweek.Days[DayIndex].IdMeal.Int64-1].Title)
 	}
-	//
-	//fmt.Println(val)
-	//for allmeals[Meals_ID_Without_Last_Week[indexmeal]].main == allmeals[nextweek.Monday.Int64].main || allmeals[Meals_ID_Without_Last_Week[indexmeal]].garnish == allmeals[nextweek.Monday.Int64].garnish {
-	//	fmt.Printf("Tuesday allmeals[Meals_ID_Without_Last_Week[indexmeal]].main: %v\n", allmeals[Meals_ID_Without_Last_Week[indexmeal]].main)
-	//	fmt.Printf("Tuesday allmeals[nextweek.Monday.Int64].main: %v\n", allmeals[nextweek.Monday.Int64].main)
-	//	fmt.Printf("Tuesday allmeals[Meals_ID_Without_Last_Week[indexmeal]].garnish: %v\n", allmeals[Meals_ID_Without_Last_Week[indexmeal]].garnish)
-	//	fmt.Printf("Tuesday allmeals[nextweek.Monday.Int64].garnish: %v\n", allmeals[nextweek.Monday.Int64].garnish)
-	//	fmt.Printf("Tuesday indexmeal: %v\n", indexmeal)
-	//	indexmeal += 1
-	//}
-	//nextweek.Tuesday.Int64 = Meals_ID_Without_Last_Week[indexmeal]
-	//nextweek.Tuesday.Valid = true
-	//Meals_ID_Without_Last_Week = RemoveElementFromSlice(Meals_ID_Without_Last_Week, indexmeal)
-	//fmt.Printf("NextWeek TuesdayID: %v\n", nextweek.Tuesday.Int64)
-	//fmt.Printf("NextWeek TuesdayName: %v\n", allmeals[nextweek.Tuesday.Int64-indexmeal].Title)
-	//
-	////Wednesday
-	//indexmeal = 0
-	//for allmeals[Meals_ID_Without_Last_Week[indexmeal]].main == allmeals[nextweek.Tuesday.Int64].main || allmeals[Meals_ID_Without_Last_Week[indexmeal]].garnish == allmeals[nextweek.Tuesday.Int64].garnish {
-	//	fmt.Printf("Tuesday allmeals[Meals_ID_Without_Last_Week[indexmeal]].main: %v\n", allmeals[Meals_ID_Without_Last_Week[indexmeal]].main)
-	//	fmt.Printf("Tuesday allmeals[nextweek.Monday.Int64].main: %v\n", allmeals[nextweek.Tuesday.Int64].main)
-	//	fmt.Printf("Tuesday allmeals[Meals_ID_Without_Last_Week[indexmeal]].garnish: %v\n", allmeals[Meals_ID_Without_Last_Week[indexmeal]].garnish)
-	//	fmt.Printf("Tuesday allmeals[nextweek.Monday.Int64].garnish: %v\n", allmeals[nextweek.Tuesday.Int64].garnish)
-	//	fmt.Printf("Tuesday indexmeal: %v\n", indexmeal)
-	//	indexmeal += 1
-	//}
-	//nextweek.Wednesday.Int64 = Meals_ID_Without_Last_Week[indexmeal]
-	//nextweek.Wednesday.Valid = true
-	//Meals_ID_Without_Last_Week = RemoveElementFromSlice(Meals_ID_Without_Last_Week, indexmeal)
-	//fmt.Printf("NextWeek WednesdayID: %v\n", nextweek.Wednesday.Int64)
-	//fmt.Printf("NextWeek WednesdayName: %v\n", allmeals[nextweek.Wednesday.Int64-indexmeal].Title)
-	//
-	////Thursday
-	//indexmeal = 0
-	//for allmeals[Meals_ID_Without_Last_Week[indexmeal]].main == allmeals[nextweek.Wednesday.Int64].main || allmeals[Meals_ID_Without_Last_Week[indexmeal]].garnish == allmeals[nextweek.Wednesday.Int64].garnish {
-	//	fmt.Printf("Tuesday allmeals[Meals_ID_Without_Last_Week[indexmeal]].main: %v\n", allmeals[Meals_ID_Without_Last_Week[indexmeal]].main)
-	//	fmt.Printf("Tuesday allmeals[nextweek.Monday.Int64].main: %v\n", allmeals[nextweek.Wednesday.Int64].main)
-	//	fmt.Printf("Tuesday allmeals[Meals_ID_Without_Last_Week[indexmeal]].garnish: %v\n", allmeals[Meals_ID_Without_Last_Week[indexmeal]].garnish)
-	//	fmt.Printf("Tuesday allmeals[nextweek.Monday.Int64].garnish: %v\n", allmeals[nextweek.Wednesday.Int64].garnish)
-	//	fmt.Printf("Tuesday indexmeal: %v\n", indexmeal)
-	//	indexmeal += 1
-	//}
-	//nextweek.Thursday.Int64 = Meals_ID_Without_Last_Week[1]
-	//nextweek.Thursday.Valid = true
-	//Meals_ID_Without_Last_Week = RemoveElementFromSlice(Meals_ID_Without_Last_Week, 1)
-	//fmt.Printf("NextWeek ThursdayID: %v\n", nextweek.Thursday.Int64)
-	//fmt.Printf("NextWeek ThursdayName: %v\n", allmeals[nextweek.Thursday.Int64-1].Title)
-	//
-	////Friday
-	//indexmeal = 0
-	//for allmeals[Meals_ID_Without_Last_Week[indexmeal]].main == allmeals[nextweek.Thursday.Int64].main || allmeals[Meals_ID_Without_Last_Week[indexmeal]].garnish == allmeals[nextweek.Thursday.Int64].garnish {
-	//	fmt.Printf("Tuesday allmeals[Meals_ID_Without_Last_Week[indexmeal]].main: %v\n", allmeals[Meals_ID_Without_Last_Week[indexmeal]].main)
-	//	fmt.Printf("Tuesday allmeals[nextweek.Monday.Int64].main: %v\n", allmeals[nextweek.Thursday.Int64].main)
-	//	fmt.Printf("Tuesday allmeals[Meals_ID_Without_Last_Week[indexmeal]].garnish: %v\n", allmeals[Meals_ID_Without_Last_Week[indexmeal]].garnish)
-	//	fmt.Printf("Tuesday allmeals[nextweek.Monday.Int64].garnish: %v\n", allmeals[nextweek.Thursday.Int64].garnish)
-	//	fmt.Printf("Tuesday indexmeal: %v\n", indexmeal)
-	//	indexmeal += 1
-	//}
-	//nextweek.Friday.Int64 = Meals_ID_Without_Last_Week[1]
-	//nextweek.Friday.Valid = true
-	//Meals_ID_Without_Last_Week = RemoveElementFromSlice(Meals_ID_Without_Last_Week, 1)
-	//fmt.Printf("NextWeek FridayID: %v\n", nextweek.Friday.Int64)
-	//fmt.Printf("NextWeek FridayName: %v\n", allmeals[nextweek.Friday.Int64-1].Title)
-	//
-	////Saturday
-	//indexmeal = 0
-	//for allmeals[Meals_ID_Without_Last_Week[indexmeal]].main == allmeals[nextweek.Friday.Int64].main || allmeals[Meals_ID_Without_Last_Week[indexmeal]].garnish == allmeals[nextweek.Friday.Int64].garnish {
-	//	fmt.Printf("Tuesday allmeals[Meals_ID_Without_Last_Week[indexmeal]].main: %v\n", allmeals[Meals_ID_Without_Last_Week[indexmeal]].main)
-	//	fmt.Printf("Tuesday allmeals[nextweek.Monday.Int64].main: %v\n", allmeals[nextweek.Friday.Int64].main)
-	//	fmt.Printf("Tuesday allmeals[Meals_ID_Without_Last_Week[indexmeal]].garnish: %v\n", allmeals[Meals_ID_Without_Last_Week[indexmeal]].garnish)
-	//	fmt.Printf("Tuesday allmeals[nextweek.Monday.Int64].garnish: %v\n", allmeals[nextweek.Friday.Int64].garnish)
-	//	fmt.Printf("Tuesday indexmeal: %v\n", indexmeal)
-	//	indexmeal += 1
-	//}
-	//nextweek.Saturday.Int64 = Meals_ID_Without_Last_Week[1]
-	//nextweek.Saturday.Valid = true
-	//Meals_ID_Without_Last_Week = RemoveElementFromSlice(Meals_ID_Without_Last_Week, 1)
-	//fmt.Printf("NextWeek SaturdayID: %v\n", nextweek.Saturday.Int64)
-	//fmt.Printf("NextWeek SaturdayName: %v\n", allmeals[nextweek.Saturday.Int64-1].Title)
-	//
-	////Sunday
-	//indexmeal = 0
-	//for allmeals[Meals_ID_Without_Last_Week[indexmeal]].main == allmeals[nextweek.Saturday.Int64].main || allmeals[Meals_ID_Without_Last_Week[indexmeal]].garnish == allmeals[nextweek.Saturday.Int64].garnish {
-	//	fmt.Printf("Tuesday allmeals[Meals_ID_Without_Last_Week[indexmeal]].main: %v\n", allmeals[Meals_ID_Without_Last_Week[indexmeal]].main)
-	//	fmt.Printf("Tuesday allmeals[nextweek.Monday.Int64].main: %v\n", allmeals[nextweek.Saturday.Int64].main)
-	//	fmt.Printf("Tuesday allmeals[Meals_ID_Without_Last_Week[indexmeal]].garnish: %v\n", allmeals[Meals_ID_Without_Last_Week[indexmeal]].garnish)
-	//	fmt.Printf("Tuesday allmeals[nextweek.Monday.Int64].garnish: %v\n", allmeals[nextweek.Saturday.Int64].garnish)
-	//	fmt.Printf("Tuesday indexmeal: %v\n", indexmeal)
-	//	indexmeal += 1
-	//}
-	//nextweek.Sunday.Int64 = Meals_ID_Without_Last_Week[1]
-	//nextweek.Sunday.Valid = true
-	//Meals_ID_Without_Last_Week = RemoveElementFromSlice(Meals_ID_Without_Last_Week, 1)
-	//fmt.Printf("NextWeek SundayID: %v\n", nextweek.Sunday.Int64)
-	//fmt.Printf("NextWeek SundayName: %v\n", allmeals[nextweek.Sunday.Int64-1].Title)
-
 	return nextweek, nil
 }
 
@@ -280,13 +182,13 @@ func GetLastWeek() (week, error) {
 	var lastweek week
 	row := db.QueryRow("SELECT * FROM Week WHERE id = 1")
 	err := row.Scan(&lastweek.ID,
-		&lastweek.Sunday,
-		&lastweek.Monday,
-		&lastweek.Tuesday,
-		&lastweek.Wednesday,
-		&lastweek.Thursday,
-		&lastweek.Friday,
-		&lastweek.Saturday,
+		&lastweek.Days[0].IdMeal,
+		&lastweek.Days[1].IdMeal,
+		&lastweek.Days[2].IdMeal,
+		&lastweek.Days[3].IdMeal,
+		&lastweek.Days[4].IdMeal,
+		&lastweek.Days[5].IdMeal,
+		&lastweek.Days[6].IdMeal,
 		&lastweek.Date_start,
 	)
 	if err != nil {
@@ -298,7 +200,7 @@ func GetLastWeek() (week, error) {
 	return lastweek, nil
 }
 
-func RemoveElementFromSlice(slice []int64, index int64) []int64 {
-	slice[index] = slice[len(slice)-1]
-	return slice[:len(slice)-1]
+func RemoveElementFromSlice(slice *[]int64, index int64) {
+	(*slice)[index] = (*slice)[len(*slice)-1]
+	*slice = (*slice)[:len(*slice)-1]
 }
