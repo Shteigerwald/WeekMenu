@@ -130,25 +130,26 @@ func CreateNextWeek(lastweek week, allmeals []meal) (week, error) {
 	var Days = [7]string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
 	for DayIndex := 0; DayIndex < 7; DayIndex++ {
 		var MealIndex int64 = 0
+		LenAllmeals := int64(len(allmeals))
 		fmt.Printf("!!!Day #%v\n", DayIndex)
 		fmt.Printf("Meals_ID_Without_Last_Week %v\n", Meals_ID_Without_Last_Week)
 		for Meals_ID_Without_Last_Week[MealIndex] == 0 {
 			MealIndex += 1
-			if MealIndex == 26 {
-				return nextweek, errors.New("BREAK: You don't have enough meals in database for rules, MealIndex = 26\n")
+			if MealIndex == LenAllmeals {
+				return nextweek, errors.New(fmt.Sprintf("BREAK: You don't have enough meals in database for rules, MealIndex = %v\n", LenAllmeals))
 			}
 		}
 		if DayIndex == 1 {
 			for allmeals[Meals_ID_Without_Last_Week[MealIndex]-1].main == allmeals[nextweek.Days[DayIndex-1].IdMeal.Int64-1].main ||
 				allmeals[Meals_ID_Without_Last_Week[MealIndex]-1].garnish == allmeals[nextweek.Days[DayIndex-1].IdMeal.Int64-1].garnish {
 				MealIndex += 1
-				if MealIndex == 26 {
-					return nextweek, errors.New("BREAK: You don't have enough meals in database for rules, MealIndex = 26\n")
+				if MealIndex == LenAllmeals {
+					return nextweek, errors.New(fmt.Sprintf("BREAK: You don't have enough meals in database for rules, MealIndex = %v\n", LenAllmeals))
 				}
 				for Meals_ID_Without_Last_Week[MealIndex] == 0 {
 					MealIndex += 1
-					if MealIndex == 26 {
-						return nextweek, errors.New("BREAK: You don't have enough meals in database for rules, MealIndex = 26\n")
+					if MealIndex == LenAllmeals {
+						return nextweek, errors.New(fmt.Sprintf("BREAK: You don't have enough meals in database for rules, MealIndex = %v\n", LenAllmeals))
 					}
 				}
 			}
@@ -163,13 +164,13 @@ func CreateNextWeek(lastweek week, allmeals []meal) (week, error) {
 				allmeals[Meals_ID_Without_Last_Week[MealIndex]-1].main == allmeals[nextweek.Days[DayIndex-2].IdMeal.Int64-1].main ||
 				allmeals[Meals_ID_Without_Last_Week[MealIndex]-1].garnish == allmeals[nextweek.Days[DayIndex-2].IdMeal.Int64-1].garnish {
 				MealIndex += 1
-				if MealIndex == 26 {
-					return nextweek, errors.New("BREAK: You don't have enough meals in database for rules, MealIndex = 26\n")
+				if MealIndex == LenAllmeals {
+					return nextweek, errors.New(fmt.Sprintf("BREAK: You don't have enough meals in database for rules, MealIndex = %v\n", LenAllmeals))
 				}
 				for Meals_ID_Without_Last_Week[MealIndex] == 0 {
 					MealIndex += 1
-					if MealIndex == 26 {
-						return nextweek, errors.New("BREAK: You don't have enough meals in database for rules, MealIndex = 26\n")
+					if MealIndex == LenAllmeals {
+						return nextweek, errors.New(fmt.Sprintf("BREAK: You don't have enough meals in database for rules, MealIndex = %v\n", LenAllmeals))
 					}
 				}
 			}
